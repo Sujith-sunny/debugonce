@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+pytest_cache/
+
+# Virtual Environment
+.venv/
+
+# Debugonce Data
+.debugonce/
+
+# Other ignored files
+build/
+dist/
+*.log
+*.json
+src/
+
+.pypirc

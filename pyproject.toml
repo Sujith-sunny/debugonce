@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "debugonce"
+version = "0.3.0"
+description = "is a Python utility designed to help developers effortlessly capture and reproduce bugs by recording function calls and runtime context."
+authors = ["Sujith Joseph <nsjr2002@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/Sujith-sunny/debugonce"
+repository = "https://github.com/Sujith-sunny/debugonce"
+keywords = ["debugging", "utility", "python", "reproducibility", "bug", "replay", "traceback", "logging", "decorator", "cli", "tracking"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<4.0"
+click = "^8.0"
+psutil = "^5.8"
+requests = "^2.25"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
