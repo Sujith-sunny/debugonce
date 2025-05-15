@@ -6,7 +6,7 @@
 
 - **@debugonce Decorator**: Capture input arguments, environment variables, current working directory, Python version, and stack traces upon exceptions.
 - **Optional Logging**: Capture contents of accessed files and HTTP requests if opted-in.
-<!--- **Storage**: All captured data is stored in a `.debugonce/` folder as JSON, tracebacks, and logs.-->
+- **Storage**: All captured data is stored in a `.debugonce/` folder as JSON, tracebacks, and logs.
 - **Command-Line Interface**: A CLI tool (`debugonce-cli`) with commands to replay, export, list, and clean captured sessions.
 - **File Access Tracking:**  Added explicit mention of file access tracking in the "Key Features" section.
 
@@ -36,9 +36,6 @@ from debugonce_packages import debugonce
 def my_function(arg1, arg2):
     # Your function logic here
 ```
-
-When an exception occurs, the state of the function will be captured automatically.
-(debugonce(0.3.0) is updates to capture file operations as well)
 
 ## CLI Guide
 
@@ -81,7 +78,3 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 ## License
 
 This project is licensed under the MIT License. See the LICENSE file for more details.
-
-
-<!--*Changes are made in README.md after 0.3. Need to be included in 0.4.0*>
-<!-- TODO - Need to make sure ./debugonce folder is being created >
