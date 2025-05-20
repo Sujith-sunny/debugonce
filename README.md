@@ -7,7 +7,7 @@
 - **@debugonce Decorator**: Capture input arguments, environment variables, current working directory, Python version, and stack traces upon exceptions.
 - **Optional Logging**: Capture contents of accessed files and HTTP requests if opted-in.
 - **Storage**: All captured data is stored in a `.debugonce/` folder as JSON files.
-- **Command-Line Interface**: A CLI tool (`debugonce-cli`) with commands to inspect, replay, export, list, and clean captured sessions.
+- **Command-Line Interface**: A CLI tool (`debugonce`) with commands to inspect, replay, export, list, and clean captured sessions.
 - **File Access Tracking:**  Added explicit mention of file access tracking in the "Key Features" section.
 
 
@@ -42,35 +42,35 @@ When the function is executed, the state (arguments, environment, etc.) will be 
 
 ## CLI Guide
 
-The `debugonce-cli` provides several commands:
+The `debugonce` provides several commands:
 
 - **inspect**: Inspect a captured session. Displays a summary of the function's arguments, result, and any exceptions that occurred.
 
   ```bash
-  debugonce-cli inspect .debugonce/session_<timestamp>.json
+  debugonce inspect .debugonce/session_<timestamp>.json
   ```
 
 - **replay**: Replay a captured session by executing the exported script. Executes the _replay.py script generated from the export, which attempts to recreate the function call.
   
   ```bash
-  debugonce-cli replay .debugonce/session_<timestamp>.json
+  debugonce replay .debugonce/session_<timestamp>.json
   ```
 
 - **export**: Generate a standalone bug reproduction script. Creates a Python script (_replay.py) that includes the function's code and attempts to reproduce the captured function call.
   
   ```bash
-  debugonce-cli export .debugonce/session_<timestamp>.json
+  debugonce export .debugonce/session_<timestamp>.json
 
 - **list**: Show all captured sessions.
   
   ```bash
-  debugonce-cli list
+  debugonce list
   ```
 
 - **clean**: Clear stored sessions.
   
   ```bash
-  debugonce-cli clean
+  debugonce clean
   ```
 
 ## Example Outputs
