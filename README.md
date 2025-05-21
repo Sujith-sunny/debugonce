@@ -1,89 +1,163 @@
+
 # debugonce
 
-`debugonce` is a Python utility designed to help developers effortlessly capture and reproduce bugs by recording function calls and runtime context. With the `@debugonce` decorator, you can easily log input arguments, environment variables, and more, making it simpler to diagnose issues in your code.
+**Effortlessly capture and reproduce bugs in your Python code.**
 
-## Key Features
+[![PyPI](https://img.shields.io/pypi/v/debugonce.svg)](https://pypi.org/project/debugonce/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Python Versions](https://img.shields.io/pypi/pyversions/debugonce.svg)](https://pypi.org/project/debugonce/)
 
-- **@debugonce Decorator**: Capture input arguments, environment variables, current working directory, Python version, and stack traces upon exceptions.
-- **Optional Logging**: Capture contents of accessed files and HTTP requests if opted-in.
-- **Storage**: All captured data is stored in a `.debugonce/` folder as JSON files.
-- **Command-Line Interface**: A CLI tool (`debugonce`) with commands to inspect, replay, export, list, and clean captured sessions.
-- **File Access Tracking:**  Added explicit mention of file access tracking in the "Key Features" section.
+---
 
+## 🔍 Overview
 
-## Installation
+`debugonce` is a Python utility that makes debugging easier by capturing function calls, inputs, and runtime context. With a simple decorator, you can store a snapshot of any function execution and replay it later for consistent bug reproduction.
 
-To install `debugonce`, paste the following command in your terminal or code editor. (use pip) :
+---
+
+## ✨ Features
+
+- 🧠 Automatically captures function arguments, environment variables, working directory, Python version, and stack trace.
+- 📁 Saves session data to `.debugonce/` as readable JSON files.
+- 🧪 CLI commands to inspect, replay, export, list, or clean captured sessions.
+- 🧵 Reproduce bugs consistently with auto-generated `_replay.py` scripts.
+- ✅ Minimal setup — just decorate and debug!
+
+---
+
+## 📦 Installation
 
 ```bash
 pip install debugonce
 ```
-<!-- or
 
-```bash
-git clone https://github.com/Sujith-sunny/debugonce.git
-cd debugonce
-pip install .
-``` -->
+---
+## 🚀 Basic Usage
 
-## Usage
-
-To use the `@debugonce` decorator, simply apply it to your function:
+### 1. Decorate Your Function
 
 ```python
 from debugonce_packages import debugonce
 
 @debugonce
-def my_function(arg1, arg2):
-    # Your function logic here
+def divide(x, y):
+    return x / y
+
+divide(4, 2)
+divide(10, 0)  # This will raise an error and trigger capture
 ```
 
-When the function is executed, the state (arguments, environment, etc.) will be captured and saved to a JSON file in the .debugonce/ directory.
+### 2. Check the Captured Session
 
-## CLI Guide
+```text
+.debugonce/
+├── session_2025-05-21T12-00-00.json
+├── traceback_2025-05-21T12-00-00.log
+```
 
-The `debugonce` provides several commands:
+---
 
-- **inspect**: Inspect a captured session. Displays a summary of the function's arguments, result, and any exceptions that occurred.
+## 🛠️ CLI Commands
 
-  ```bash
-  debugonce inspect .debugonce/session_<timestamp>.json
-  ```
+### 🔎 List All Sessions
 
-- **replay**: Replay a captured session by executing the exported script. Executes the _replay.py script generated from the export, which attempts to recreate the function call.
-  
-  ```bash
-  debugonce replay .debugonce/session_<timestamp>.json
-  ```
+```bash
+debugonce list
+```
 
-- **export**: Generate a standalone bug reproduction script. Creates a Python script (_replay.py) that includes the function's code and attempts to reproduce the captured function call.
-  
-  ```bash
-  debugonce export .debugonce/session_<timestamp>.json
+### 🧾 Inspect a Session
 
-- **list**: Show all captured sessions.
-  
-  ```bash
-  debugonce list
-  ```
+```bash
+debugonce inspect .debugonce/session_<timestamp>.json
+```
 
-- **clean**: Clear stored sessions.
-  
-  ```bash
-  debugonce clean
-  ```
+### 📤 Export a Session
 
-## Example Outputs
+Generates a _replay.py file to recreate the captured call
+```bash
+debugonce export .debugonce/session_<timestamp>.json
+```
 
-After running a function decorated with `@debugonce`, you will find the captured data in the `.debugonce/` folder. This includes:
+### ▶️ Replay the Session
+Executes the _replay.py to reproduce the same error with the same scenario
+```bash
+debugonce replay .debugonce/session_<timestamp>.json
+```
 
-- `session_<timestamp>.json`: Contains input arguments and environment details.
-- `traceback_<timestamp>.log`: Logs the stack trace if an exception occurred.
+### 🧹 Clean All Sessions
 
-## Contributing
+```bash
+debugonce clean
+```
 
-<!--Contributions are welcome! Please feel free to submit a pull request or open an issue for any enhancements or bug fixes.-->
-Contributions are welcome! Please feel free to submit a pull request or mail me <nsjr2002@gmail.com>
-## License
+---
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
+## 📁 What’s Captured?
+
+- ✅ Function name and arguments
+- ✅ HTTP Requests
+- ✅ Python version
+- ✅ Current working directory
+- ✅ Environment variables
+- ✅ Stack trace (if an error occurred)
+- ✅ Timestamp
+
+---
+
+## 🔧 Advanced Example
+
+```python
+from debugonce_packages import debugonce
+
+@debugonce
+def buggy_function(a, b):
+    return a / b  # Will raise ZeroDivisionError
+
+buggy_function(10, 0)
+```
+
+Then run:
+
+```bash
+debugonce export .debugonce/session_<timestamp>.json
+debugonce replay .debugonce/session<timestamp>_replay.py
+```
+---
+
+## 📂 Project Structure
+
+```text
+project/
+├── your_code.py        
+└── .debugonce/
+    ├── session_<timestamp>.json    # Generated by `debugonce export`
+    ├── session_<timestamp>_replay.py
+```
+
+---
+
+## 🤝 Contributing
+
+Have ideas or found a bug? Contributions are welcome!
+
+- 📌 File issues and PRs on [GitHub](https://github.com/sujithjoseph/debugonce)
+- 📬 Email: [nsjr2002@gmail.com](mailto:nsjr2002@gmail.com)
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). See the `LICENSE` file for more details.
+
+---
+
+## 🔗 Useful Links
+
+- 📦 PyPI: [https://pypi.org/project/debugonce/](https://pypi.org/project/debugonce/)
+- 💻 GitHub: [https://github.com/sujithjoseph/debugonce](https://github.com/sujithjoseph/debugonce)
+
+---
+
+## 🏷️ Keywords
+
+`debugonce` · `python debugging` · `function replay` · `bug capture` · `debug decorator` · `debug CLI` · `reproducible debugging` · `python trace logger`, `debugging`, `production logging`, 
