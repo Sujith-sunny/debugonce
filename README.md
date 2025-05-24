@@ -3,6 +3,7 @@
 
 **Effortlessly capture and reproduce bugs in your Python code.**
 
+[![PyPI Downloads](https://static.pepy.tech/badge/debugonce)](https://pepy.tech/projects/debugonce)
 [![PyPI](https://img.shields.io/pypi/v/debugonce.svg)](https://pypi.org/project/debugonce/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python Versions](https://img.shields.io/pypi/pyversions/debugonce.svg)](https://pypi.org/project/debugonce/)

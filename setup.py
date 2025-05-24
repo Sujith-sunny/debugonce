@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='debugonce',
-    version='0.5.1',
+    version='0.5.2',
     author='Sujith Joseph',
     author_email='nsjr2002@gmail.com',
     url='https://github.com/Sujith-sunny/debugonce',
@@ -25,7 +25,6 @@ setup(
     python_requires='>=3.8',
     long_description=description,
     long_description_content_type='text/markdown',
-    keywords='debugging, bug reproduction, python, decorator, cli, logging',
     entry_points={
         'console_scripts': [
             'debugonce=debugonce_packages.cli:cli',

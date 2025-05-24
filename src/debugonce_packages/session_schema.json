@@ -1,0 +1,65 @@
+{
+  "type": "object",
+  "properties": {
+    "function": {"type": "string"},
+    "args": {
+      "type": "array",
+      "items": {
+        "type": ["string", "integer", "boolean", "array", "object", "null"]
+      }
+    },
+    "kwargs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "integer", "boolean", "array", "object", "null"]
+      }
+    },
+    "result": {"type": ["string", "number", "null", "boolean"]},
+    "exception": {"type": ["string", "null"]},
+    "environment_variables": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "current_working_directory": {"type": "string"},
+    "python_version": {"type": "string"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "file_access": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": {"type": "string"},
+          "operation": {"type": "string", "enum": ["read", "write"]}
+        },
+        "required": ["file", "operation"]
+      }
+    },
+    "http_requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {"type": "string"},
+          "method": {"type": "string"},
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "body": {"type": ["string", "null"]},
+          "status_code": {"type": "integer"},
+          "response_headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["function", "args", "kwargs", "environment_variables", "current_working_directory", "python_version", "timestamp"]
+}
