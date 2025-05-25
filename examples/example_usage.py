@@ -1,12 +1,26 @@
-def sample_function(x, y):
-    return x / y
+import requests
+from debugonce_packages import debugonce
 
+# @debugonce
+# def test_function_with_http_call(input):
+#     """Function that makes an HTTP request."""
+#     print(input)
+#     response = requests.get("https://jsonplaceholder.typicode.com/posts/1 ")
+#     data = response.json()
+#     #print("HTTP Response:", data)
+#     return cloud_data
+
+
+# if __name__ == "__main__":
+#     print("\nRunning test_function_with_http_call...")
+#     test_function_with_http_call(5)
+
+
+#write a buggy function
 @debugonce
-def buggy_function(a, b):
-    return sample_function(a, b)
-
+def divide(a,b):
+    return a/b
 if __name__ == "__main__":
-    try:
-        result = buggy_function(10, 0)  # This will raise a ZeroDivisionError
-    except ZeroDivisionError as e:
-        print(f"Caught an exception: {e}")
+    print("\nRunning divide...")
+    divide(4,2)
+    divide(4,0)

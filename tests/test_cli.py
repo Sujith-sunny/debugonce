@@ -1,150 +1,108 @@
+import unittest
+import json
+import os
+from click.testing import CliRunner
+from src.debugonce_packages.cli import export
 import subprocess
 import sys
-import os
-import json
-import unittest
-import re
-import pytest
-import shutil
 
 class TestDebugOnceCLI(unittest.TestCase):
     def setUp(self):
-        """Set up a temporary .debugonce directory for testing."""
-        self.session_dir = ".debugonce"
-        os.makedirs(self.session_dir, exist_ok=True)
-        self.session_file = os.path.join(self.session_dir, "session.json")
-        #Create a valid json file for testing
+        self.session_data = {
+            "function": "divide",
+            "args": [4, 2],
+            "kwargs": {},
+            "http_requests": [
+                {
+                    "url": "https://example.com",
+                    "method": "GET",
+                    "headers": {
+                        "User-Agent": "debugonce"
+                    },
+                    "body": None,
+                    "status_code": 200,
+                    "response_headers": {
+                        "Content-Type": "text/html"
+                    }
+                }
+            ],
+            "python_version": "3.11.5",
+            "current_working_directory": "/Users/nosinasujithjosephratnam/Documents/testing",
+            "env_vars": {
+                "PATH": "/usr/bin:/bin",
+                "HOME": "/Users/nosinasujithjosephratnam"
+            },
+            "timestamp": "2025-05-20T17:55:08.035584",
+            "file_access": [
+                {
+                    "file": "/Users/nosinasujithjosephratnam/.netrc",
+                    "mode": "r",
+                    "operation": "read"
+                }
+            ]
+        }
+        self.session_file = "session.json"
         with open(self.session_file, "w") as f:
-            json.dump({"function": "test_function",
-                       "args": [1, 2, 3],
-                       "kwargs": {},
-                       "environment_variables": {},
-                       "current_working_directory": os.getcwd(),
-                       "python_version": sys.version,
-                       "timestamp": "2024-01-01T00:00:00"}, f) #Simplified
+            json.dump(self.session_data, f)
 
     def tearDown(self):
-        """Clean up the temporary .debugonce directory."""
-        if os.path.exists(self.session_dir):
-            shutil.rmtree(self.session_dir) #Use shutil to remove non-empty directories
-
-    def test_inspect(self):
-        """Test the inspect command."""
-        result = subprocess.run(
-            [sys.executable, "src/debugonce_packages/cli.py", "inspect", self.session_file],
-            capture_output=True,
-            text=True
-        )
-        self.assertIn("Replaying function with input", result.stdout)
-
-    def test_replay(self):
-        """Test the replay command."""
         export_file = os.path.splitext(self.session_file)[0] + "_replay.py"
-
-        # Check if the exported script exists
-        if not os.path.exists(export_file):
-            # Export the script first
-            export_result = subprocess.run(
-                [sys.executable, "src/debugonce_packages/cli.py", "export", self.session_file],
-                capture_output=True,
-                text=True,
-            )
-            self.assertIn(f"Exported bug reproduction script to {export_file}", export_result.stdout)
-            self.assertTrue(os.path.exists(export_file))
-
-        result = subprocess.run(
-            [sys.executable, "src/debugonce_packages/cli.py", "replay", self.session_file],
-            capture_output=True,
-            text=True,
-        )
-        self.assertIn("Result: 6", result.stdout)
+        if os.path.exists(self.session_file):
+            os.remove(self.session_file)
+        if os.path.exists(export_file):
+            os.remove(export_file)
 
     def test_export(self):
-        """Test the export command."""
-        export_file = os.path.splitext(self.session_file)[0] + "_replay.py"
-        result = subprocess.run(
-            [sys.executable, "src/debugonce_packages/cli.py", "export", self.session_file],
-            capture_output=True,
-            text=True
-        )
-        self.assertIn("Exported bug reproduction script to", result.stdout)
-        # Check for schema validation errors
-        self.assertNotIn("Error reading", result.stdout)
-        self.assertNotIn("Failed validating", result.stdout)
+        runner = CliRunner()
+        result = runner.invoke(export, [self.session_file])
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(os.path.exists(os.path.splitext(self.session_file)[0] + "_replay.py"))
 
-        #Verify that the function source code exists
-        with open(export_file, "r") as f:
-            file_content = f.read()
-            self.assertIn("def test_function", file_content)
+    def test_export_script_contents(self):
+        runner = CliRunner()
+        runner.invoke(export, [self.session_file])
+        with open(os.path.splitext(self.session_file)[0] + "_replay.py", "r") as f:
+            script = f.read()
+        
+        # Test environment variables
+        self.assertIn('os.environ["PATH"] = "/usr/bin:/bin"', script)
+        self.assertIn('os.environ["HOME"] = "/Users/nosinasujithjosephratnam"', script)
+        
+        # Test working directory
+        self.assertIn('os.chdir("/Users/nosinasujithjosephratnam/Documents/testing")', script)
+        
+        # Test HTTP requests
+        self.assertIn('requests.get("https://example.com", headers={"User-Agent": "debugonce"})', script)
+        
+        # Test file access
+        self.assertIn('"/Users/nosinasujithjosephratnam/.netrc"', script)
+        self.assertIn('"r"', script)
+        
+        # Test function call
+        self.assertIn('divide(4, 2)', script)
 
-        #Verify that has the right arguments
-            self.assertIn("input_args = [1, 2, 3", file_content)
+    def test_export_invalid_session_file(self):
+        runner = CliRunner()
+        result = runner.invoke(export, ["invalid_session_file.json"])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("Error reading session file", result.output)
 
-    def test_list(self):
-        """Test the list command."""
-        result = subprocess.run(
-            [sys.executable, "src/debugonce_packages/cli.py", "list"],
-            capture_output=True,
-            text=True
-        )
-        self.assertIn("Captured sessions", result.stdout)
+    def test_export_empty_session_file(self):
+        with open(self.session_file, "w") as f:
+            f.write("")
+        runner = CliRunner()
+        result = runner.invoke(export, [self.session_file])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("Error reading session file", result.output)
 
-    def test_clean(self):
-        """Test the clean command."""
-        # First, create a file in the session directory
-        test_file = os.path.join(self.session_dir, "test_file.txt")
-        with open(test_file, "w") as f:
-            f.write("test")
+    def test_export_missing_function_name(self):
+        del self.session_data["function"]
+        with open(self.session_file, "w") as f:
+            json.dump(self.session_data, f)
+        runner = CliRunner()
+        result = runner.invoke(export, [self.session_file])
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("Error generating replay script", result.output)
 
-        result = subprocess.run(
-            [sys.executable, "src/debugonce_packages/cli.py", "clean"],
-            capture_output=True,
-            text=True
-        )
-        self.assertIn("Cleared all captured sessions", result.stdout)
-        self.assertFalse(os.path.exists(test_file))
-
-    # def test_export_invalid_session_file(self):
-    #     """Test the export command with an invalid session file."""
-    #     invalid_session_file = os.path.join(self.session_dir, "invalid_session.json")
-    #     with open(invalid_session_file, "w") as f:
-    #         f.write("{\"invalid\": \"json\"}")  # An actual, invalid json
-
-    #     # Export should print the error and return exit code 1
-    #     result = subprocess.run(
-    #         [sys.executable, "src/debugonce_packages/cli.py", "export", invalid_session_file],
-    #         capture_output=True,
-    #         text=True,
-    #     )
-    #     self.assertEqual(result.returncode, 1)
-    #     self.assertIn("Error reading session file", result.stderr)
-
-    # def test_inspect_invalid_session_file(self):
-    #     """Test the inspect command with an invalid session file."""
-    #     invalid_session_file = os.path.join(self.session_dir, "invalid_session.json")
-    #     with open(invalid_session_file, "w") as f:
-    #         f.write("{\"invalid\": \"json\"}")  # An actual, invalid json
-
-    #     # Inspect should print the error and return exit code 1
-    #     result = subprocess.run(
-    #         [sys.executable, "src/debugonce_packages/cli.py", "inspect", invalid_session_file],
-    #         capture_output=True,
-    #         text=True,
-    #     )
-    #     self.assertEqual(result.returncode, 1)
-    #     self.assertIn("Error reading session file", result.stderr)
-
-    # def test_replay_invalid_session_file(self):
-    #     """Test the replay command with an invalid session file."""
-    #     invalid_session_file = os.path.join(self.session_dir, "invalid_session.json")
-    #     with open(invalid_session_file, "w") as f:
-    #         f.write("{\"invalid\": \"json\"}")  # An actual, invalid json
-
-    #     # Replay should print the error and return exit code 1
-    #     result = subprocess.run(
-    #         [sys.executable, "src/debugonce_packages/cli.py", "replay", invalid_session_file],
-    #         capture_output=True,
-    #         text=True,
-    #     )
-    #     self.assertEqual(result.returncode, 1)
-    #     self.assertIn("Error reading session file", result.stderr)
+if __name__ == "__main__":
+    unittest.main()

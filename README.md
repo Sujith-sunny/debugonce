@@ -36,6 +36,8 @@ pip install debugonce
 ## 🚀 Basic Usage
 
 ### 1. Decorate Your Function
+To capture the state of a function, simply decorate it with `@debugonce`:
+
 
 ```python
 from debugonce_packages import debugonce
@@ -139,9 +141,16 @@ project/
 
 ## 🤝 Contributing
 
-Have ideas or found a bug? Contributions are welcome!
+Contributions are welcome! If you find a bug or have a feature request, please open an issue on the GitHub repository. If you'd like to contribute code:
 
-- 📌 File issues and PRs on [GitHub](https://github.com/sujithjoseph/debugonce)
+1.  Fork the repository.
+2.  Create a new branch for your feature or bug fix.
+3.  Make your changes, including tests if applicable.
+4.  Ensure all tests pass.
+5.  Submit a pull request.
+
+or
+
 - 📬 Email: [nsjr2002@gmail.com](mailto:nsjr2002@gmail.com)
 
 ---

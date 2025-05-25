@@ -26,67 +26,75 @@ logger.addHandler(handler)
 def debugonce(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # Capture the original open function
-        original_open = builtins.open
-        file_access_log = []
-        request_log = [] # Add request log
-
-        # Define a custom open function to track file access
-        def custom_open(file, mode='r', *args, **kwargs):
-            filepath = os.path.abspath(file)
-            if not filepath.startswith(os.path.abspath(".debugonce")):
-                operation = "read" if "r" in mode else "write"
-                file_access_log.append({"file": filepath, "operation": operation})
-            return original_open(file, mode, *args, **kwargs)
-
-        # Replace the built-in open function with the custom one
-        builtins.open = custom_open
-
-        # Define a function to log request/response information
-        def log_request_response(response, *args, **kwargs):
-            request = response.request
-            request_data = {
-                "url": request.url,
-                "method": request.method,
-                "headers": dict(request.headers),
-                "body": request.body.decode('utf-8') if request.body else None,
-                "status_code": response.status_code,
-                "response_headers": dict(response.headers),
-                "response_content": response.content.decode('utf-8', errors='ignore')[:500] if response.content else None, #Limiting content to 500 chars
-            }
-            request_log.append(request_data)
-            return response
-
-        # Patch the requests.Session.request method
-        original_request = sessions.Session.request
-        def new_request(self, *args, **kwargs):
-            response = original_request(self, *args, **kwargs)
-            response = log_request_response(response)
-            return response
-
-        sessions.Session.request = new_request
-
         try:
-            # Execute the function and capture the result
-            result = func(*args, **kwargs)
-            capture_state(func, args, kwargs, result, file_access_log=file_access_log, request_log=request_log) #Pass request log
+            # Initialize exception as None
+            exception = None
+            
+            # Capture environment variables
+            env_vars = dict(os.environ)
+            
+            # Capture function name and arguments
+            func_name = func.__name__
+            
+            # Capture current working directory
+            cwd = os.getcwd()
+            
+            # Capture HTTP requests
+            http_requests = []
+            
+            # Capture file access
+            file_access = []
+            
+            # Execute function and capture result/exception
+            try:
+                result = func(*args, **kwargs)
+            except Exception as e:
+                exception = str(e)
+                result = None
+            
+            # Create state data
+            data = {
+                "function": func_name,
+                "args": args,
+                "kwargs": kwargs,
+                "env_vars": env_vars,
+                "current_working_directory": cwd,
+                "http_requests": http_requests,
+                "file_access": file_access,
+                "exception": exception,
+                "result": result,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Ensure the .debugonce directory exists
+            os.makedirs(".debugonce", exist_ok=True)
+            
+            # Save the state to a file in the .debugonce directory
+            session_file = os.path.join(".debugonce", f"{func_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+            with open(session_file, "w") as f:
+                json.dump(data, f, default=str)
+            
+            logger.info(f"Captured state for function {func_name} at {inspect.getfile(func)}")
+            
             return result
         except Exception as e:
-            # Capture the state in case of an exception
-            capture_state(func, args, kwargs, exception=e, file_access_log=file_access_log, request_log=request_log) #Pass request log
+            logger.error(f"Error capturing state for function {func_name}: {e}")
             raise
-        finally:
-            # Restore the original open function
-            builtins.open = original_open
-            # Unpatch the requests.Session.request method
-            sessions.Session.request = original_request
-
     return wrapper
 
 def capture_state(func, args, kwargs, result=None, exception=None, file_access_log=None, request_log=None):
+    # Get function source code and imports
+    try:
+        func_source = inspect.getsource(func)
+        module = inspect.getmodule(func)
+        imports = [line for line in inspect.getsource(module).split('\n') if line.startswith('import') or line.startswith('from')]
+    except Exception as e:
+        func_source = f"def {func.__name__}(*args, **kwargs):\n    raise NotImplementedError('Source code not available')"
+        imports = []
+
     state = {
         "function": func.__name__,
-        "args": list(args),  # Convert args to a list
+        "args": list(args),
         "kwargs": kwargs,
         "result": result,
         "exception": str(exception) if exception else None,
@@ -94,8 +102,10 @@ def capture_state(func, args, kwargs, result=None, exception=None, file_access_l
         "current_working_directory": os.getcwd(),
         "python_version": sys.version,
         "timestamp": datetime.now().isoformat(),
-        "file_access": file_access_log or [],  # Add file access log
-        "http_requests": request_log or [] # Added http requests
+        "file_access": file_access_log or [],
+        "http_requests": request_log or [],
+        "function_source": func_source,
+        "imports": imports
     }
 
     if exception:

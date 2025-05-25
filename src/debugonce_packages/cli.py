@@ -46,7 +46,7 @@ def inspect(session_file):
 @click.argument('session_file', type=click.Path(exists=True))
 def replay(session_file):
     """Replay a captured session by executing the exported script."""
-    export_file = os.path.splitext(session_file)[0] + "_replay.py"
+    export_file = os.path.splitext(session_file)[0] + ".py"
 
     # Check if the exported script exists
     if not os.path.exists(export_file):
@@ -77,48 +77,106 @@ def replay(session_file):
         sys.exit(1)
 
 @click.command()
-@click.argument('session_file', type=click.Path(exists=True))
+@click.argument('session_file', type=click.Path())
 def export(session_file):
     """Export a bug reproduction script."""
     try:
         with open(session_file, "r") as f:
-            session_data = json.load(f)
-    except json.JSONDecodeError as e:
-        click.echo(f"Error reading session file: {e}", err=True)
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                click.echo("Error reading session file: Invalid JSON format", err=True)
+                sys.exit(1)
+
+        # Validate required fields
+        if "function" not in data:
+            click.echo("Error generating replay script: Missing function name", err=True)
+            sys.exit(1)
+
+        # Extract data with proper key names and defaults
+        func_name = data["function"]
+        args = data.get("args", [])
+        kwargs = data.get("kwargs", {})
+        env_vars = data.get("env_vars", {})
+        cwd = data.get("current_working_directory", os.getcwd())
+        http_requests = data.get("http_requests", [])
+        file_access = data.get("file_access", [])
+        exception = data.get("exception")
+
+        # Generate script content
+        script_lines = ["# Bug Reproduction Script"]
+        script_lines.extend(["import json", "import os", "import sys", "import requests", ""])
+
+        # Set environment variables
+        script_lines.append("# Set environment variables")
+        for key, value in env_vars.items():
+            script_lines.append(f'os.environ["{key}"] = "{value}"')
+        script_lines.append("")
+
+        # Set working directory
+        script_lines.append("# Set current working directory")
+        script_lines.append(f'os.chdir("{cwd}")')
+        script_lines.append("")
+
+        # Make HTTP requests
+        script_lines.append("# Make HTTP requests")
+        for request in http_requests:
+            method = request.get("method", "GET").lower()
+            url = request.get("url", "")
+            headers = request.get("headers", {})
+            if method == "get":
+                script_lines.append(f'requests.get("{url}", headers={json.dumps(headers)})')
+            elif method == "post":
+                body = request.get("body", "")
+                script_lines.append(f'requests.post("{url}", headers={json.dumps(headers)}, data={json.dumps(body)})')
+        script_lines.append("")
+
+        # Access files
+        script_lines.append("# Access files")
+        for file in file_access:
+            mode = file.get("mode", "r")  # Default to 'r' if mode is not specified
+            script_lines.append(f'with open("{file["file"]}", "{mode}") as f:')
+            script_lines.append("    pass")
+        script_lines.append("")
+
+        # Function implementation
+        script_lines.extend([
+            "# Function implementation",
+            f"def {func_name}(*args, **kwargs):",
+            "    # TODO: Replace this with actual function implementation",
+            "    # This is a placeholder that will be replaced with the actual function code",
+            f"    print(f\"Called {func_name} with args={{args}} and kwargs={{kwargs}}\")",
+            "    return None",
+            ""
+        ])
+
+        # Main execution
+        script_lines.extend([
+            "if __name__ == \"__main__\":",
+            "    try:",
+            f"        result = {func_name}({', '.join(map(str, args))})",  # Direct function call with args
+            "        print(f\"Function returned: {result}\")",
+            "    except Exception as e:",
+            "        print(f\"Exception occurred during replay: {e}\")",
+            "        sys.exit(1)"
+        ])
+        # Capture exception if present
+        if exception:
+            script_lines.append(f"print(\"Captured exception: {exception}\")")
+
+        # Write script to file
+        export_file = os.path.splitext(session_file)[0] + "_replay.py"
+        with open(export_file, "w") as f:
+            f.write("\n".join(script_lines))
+
+        return 0
+
+    except FileNotFoundError:
+        click.echo("Error reading session file: File not found", err=True)
         sys.exit(1)
-
-    if not session_data:
-        click.echo("Error: Invalid session file.", err=True)
-        sys.exit(1)
-
-    function_name = session_data.get("function")
-    args = session_data.get("args", [])
-    kwargs = session_data.get("kwargs", {})
-    exception = session_data.get("exception")
-    script_content = f"""# Bug Reproduction Script
-import json
-import os
-import sys
-def test_function(a, b, c):
-    return a + b + c
-
-def replay_function():
-    input_args = {args}
-    input_kwargs = {kwargs}
-    try:
-        result = test_function(*input_args, **input_kwargs)
-        print(f"Result: {{result}}")
     except Exception as e:
-        print("Exception occurred during replay:", e)
-
-if __name__ == "__main__":
-    replay_function()
-"""
-
-    export_file = os.path.splitext(session_file)[0] + "_replay.py"
-    with open(export_file, 'w') as f:
-        f.write(script_content)
-    click.echo(f"Exported bug reproduction script to {export_file}")
+        click.echo(f"Error generating replay script: {str(e)}", err=True)
+        sys.exit(1)
 
 @click.command()
 def list():
