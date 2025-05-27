@@ -102,6 +102,8 @@ def export(session_file):
         http_requests = data.get("http_requests", [])
         file_access = data.get("file_access", [])
         exception = data.get("exception")
+        # Use function_code if present, else function_source, else empty string
+        function_code = data.get("function_code") or data.get("function_source") or ""
 
         # Generate script content
         script_lines = ["# Bug Reproduction Script"]
@@ -140,24 +142,26 @@ def export(session_file):
         script_lines.append("")
 
         # Function implementation
-        script_lines.extend([
-            "# Function implementation",
-            f"def {func_name}(*args, **kwargs):",
-            "    # TODO: Replace this with actual function implementation",
-            "    # This is a placeholder that will be replaced with the actual function code",
-            f"    print(f\"Called {func_name} with args={{args}} and kwargs={{kwargs}}\")",
-            "    return None",
-            ""
-        ])
+        script_lines.append("# Function implementation")
+        if function_code:
+            # Remove @debugonce decorator if present
+            import re
+            function_code_clean = re.sub(r'@debugonce\s*\n', '', function_code)
+            script_lines.append(function_code_clean)
+        else:
+            script_lines.append(f"def {func_name}(*args, **kwargs):\n    raise NotImplementedError('Function source not available')")
+        script_lines.append("")
 
         # Main execution
+        # Use repr() for each argument to preserve correct types (strings quoted, numbers as-is, etc.)
+        arg_strs = [repr(arg) for arg in args]
         script_lines.extend([
             "if __name__ == \"__main__\":",
             "    try:",
-            f"        result = {func_name}({', '.join(map(str, args))})",  # Direct function call with args
+            f"        result = {func_name}({', '.join(arg_strs)})",  # Direct function call with repr'd args
             "        print(f\"Function returned: {result}\")",
             "    except Exception as e:",
-            "        print(f\"Exception occurred during replay: {e}\")",
+            "        print(f\"Exception occurred during replay: {e}\", file=sys.stderr)",
             "        sys.exit(1)"
         ])
         # Capture exception if present

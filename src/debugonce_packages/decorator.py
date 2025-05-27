@@ -17,7 +17,10 @@ os.makedirs(os.path.dirname(log_file), exist_ok=True)
 logger = logging.getLogger("debugonce")
 logger.setLevel(logging.DEBUG)
 
-# Create a rotating file handler
+# Remove all handlers before adding our file handler to avoid accidental stdout/stderr logging
+for handler in list(logger.handlers):
+    logger.removeHandler(handler)
+
 handler = RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=3)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
@@ -26,60 +29,71 @@ logger.addHandler(handler)
 def debugonce(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        try:
-            # Initialize exception as None
-            exception = None
-            
-            # Capture environment variables
-            env_vars = dict(os.environ)
-            
-            # Capture function name and arguments
-            func_name = func.__name__
-            
-            # Capture current working directory
-            cwd = os.getcwd()
-            
-            # Capture HTTP requests
-            http_requests = []
-            
-            # Capture file access
-            file_access = []
-            
-            # Execute function and capture result/exception
+        import unittest.mock
+        file_access_log = []
+        http_request_log = []
+
+        def normalize_url(method, url):
             try:
-                result = func(*args, **kwargs)
-            except Exception as e:
-                exception = str(e)
-                result = None
-            
-            # Create state data
-            data = {
-                "function": func_name,
-                "args": args,
-                "kwargs": kwargs,
-                "env_vars": env_vars,
-                "current_working_directory": cwd,
-                "http_requests": http_requests,
-                "file_access": file_access,
-                "exception": exception,
-                "result": result,
-                "timestamp": datetime.now().isoformat()
-            }
-            
-            # Ensure the .debugonce directory exists
-            os.makedirs(".debugonce", exist_ok=True)
-            
-            # Save the state to a file in the .debugonce directory
-            session_file = os.path.join(".debugonce", f"{func_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-            with open(session_file, "w") as f:
-                json.dump(data, f, default=str)
-            
-            logger.info(f"Captured state for function {func_name} at {inspect.getfile(func)}")
-            
-            return result
-        except Exception as e:
-            logger.error(f"Error capturing state for function {func_name}: {e}")
-            raise
+                return requests.Request(method, url).prepare().url
+            except Exception:
+                return url
+
+        exception = None
+        result = None
+        import builtins as _builtins
+        # Get the current open and request (may be a mock) at call time
+        def get_wrapped_open():
+            real_open = _builtins.open
+            def open_wrapper(file, mode='r', *a, **k):
+                if any(m in mode for m in ['w', 'a', 'x']):
+                    operation = 'write'
+                elif 'r' in mode:
+                    operation = 'read'
+                else:
+                    operation = 'other'
+                file_access_log.append({
+                    "file": file,
+                    "mode": mode,
+                    "operation": operation,
+                    "timestamp": datetime.now().isoformat()
+                })
+                return real_open(file, mode, *a, **k)
+            return open_wrapper
+        def get_wrapped_request():
+            real_request = sessions.Session.request
+            def request_wrapper(self, method, url, *a, **k):
+                response = real_request(self, method, url, *a, **k)
+                http_request_log.append({
+                    "method": method,
+                    "url": normalize_url(method, url),
+                    "status_code": getattr(response, 'status_code', None),
+                    "timestamp": datetime.now().isoformat()
+                })
+                return response
+            return request_wrapper
+        with unittest.mock.patch('builtins.open', new=get_wrapped_open()):
+            with unittest.mock.patch.object(sessions.Session, 'request', new=get_wrapped_request()):
+                try:
+                    result = func(*args, **kwargs)
+                except Exception as e:
+                    exception = e
+                    result = None
+        # Save state, but never let it swallow the original exception
+        try:
+            capture_state(
+                func, args, kwargs,
+                result=result,
+                exception=exception,
+                file_access_log=file_access_log,
+                request_log=http_request_log
+            )
+        except Exception:
+            logger.exception("Error capturing state in debugonce decorator")
+        logger.info(f"Captured state for function {func.__name__} at {datetime.now().isoformat()}")
+        if exception is not None:
+            raise exception
+        return result
     return wrapper
 
 def capture_state(func, args, kwargs, result=None, exception=None, file_access_log=None, request_log=None):
@@ -111,10 +125,7 @@ def capture_state(func, args, kwargs, result=None, exception=None, file_access_l
     if exception:
         state["stack_trace"] = traceback.format_exc()
 
-    # Temporarily restore the original open function to avoid logging save_state operations
-    original_open = builtins.open
     save_state(state)
-    builtins.open = original_open
 
 def save_state(state):
     # Save the state to a file
@@ -122,6 +133,3 @@ def save_state(state):
     file_path = os.path.join(".debugonce", f"session_{int(datetime.now().timestamp())}.json")
     with open(file_path, "w") as f:
         json.dump(state, f, indent=4)
-
-    # Log the state capture
-    logger.info(f"Captured state for function {state['function']} at {state['timestamp']}")

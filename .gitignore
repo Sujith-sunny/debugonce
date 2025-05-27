@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.egg-info/
 pytest_cache/
@@ -14,5 +15,7 @@ pytest_cache/
 build/
 dist/
 *.log
+
+post_title.txt
 
 .pypirc

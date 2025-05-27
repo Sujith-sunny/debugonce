@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "debugonce"
-version = "0.3.0"
+version = "0.6.3"
 description = "is a Python utility designed to help developers effortlessly capture and reproduce bugs by recording function calls and runtime context."
 authors = ["Sujith Joseph <nsjr2002@gmail.com>"]
 license = "MIT"

@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='debugonce',
-    version='0.5.3',
+    version='0.6.3',
     author='Sujith Joseph',
     author_email='nsjr2002@gmail.com',
     url='https://github.com/Sujith-sunny/debugonce',
